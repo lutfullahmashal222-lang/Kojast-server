@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>کجاست</title>
+
+<style>
+body{font-family:sans-serif;background:#f2f2f2;padding:15px}
+input,select,button{width:100%;padding:10px;margin:5px}
+.card{background:#fff;padding:10px;margin:10px 0;border-radius:10px}
+img{width:100%;border-radius:10px}
+iframe{width:100%;height:200px}
+</style>
+</head>
+<body>
+
+<h2>ورود</h2>
+
+<input id="phone" placeholder="شماره">
+<input id="pass" placeholder="رمز">
+<button onclick="login()">ورود</button>
+
+<hr>
+
+<h2>ثبت دکان</h2>
+
+<input id="name" placeholder="نام دکان">
+<input id="city" placeholder="شهر">
+
+<select id="category">
+<option>دواخانه</option>
+<option>دکتر</option>
+<option>شفاخانه</option>
+<option>مارکیت</option>
+</select>
+
+<input id="phone2" placeholder="تماس">
+<input id="whatsapp" placeholder="واتساپ">
+
+<input type="file" id="image">
+
+<button onclick="getLocation()">گرفتن لوکیشن</button>
+<button onclick="save()">ثبت</button>
+
+<hr>
+
+<h2>جستجو</h2>
+<input id="searchCity" placeholder="جستجوی شهر">
+<button onclick="load()">جستجو</button>
+
+<div id="list"></div>
+
+<input id="adminPass" placeholder="رمز مدیر">
+
+<script>
+
+let lat=0,lng=0;
+
+function login(){
+fetch("/api/login",{
+method:"POST",
+headers:{'Content-Type':'application/json'},
+body:JSON.stringify({
+phone:phone.value,
+password:pass.value
+})
+}).then(()=>alert("ورود موفق"));
+}
+
+function getLocation(){
+navigator.geolocation.getCurrentPosition(pos=>{
+lat=pos.coords.latitude;
+lng=pos.coords.longitude;
+alert("لوکیشن ثبت شد");
+});
+}
+
+function save(){
+
+let form=new FormData();
+
+form.append("name",name.value);
+form.append("city",city.value);
+form.append("category",category.value);
+form.append("phone",phone2.value);
+form.append("whatsapp",whatsapp.value);
+form.append("lat",lat);
+form.append("lng",lng);
+
+form.append("image",image.files[0]);
+
+fetch("/api/shops",{
+method:"POST",
+body:form
+}).then(()=>load());
+}
+
+function load(){
+
+fetch("/api/shops")
+.then(r=>r.json())
+.then(data=>{
+
+let cityFilter=searchCity.value.toLowerCase();
+
+let html="";
+
+data
+.filter(s=>s.city.toLowerCase().includes(cityFilter))
+.forEach(s=>{
+
+html+=`
+<div class="card">
+
+<img src="${s.image}">
+
+<h3>${s.name}</h3>
+📍 ${s.city} — ${s.category}<br>
+
+📞 <a href="tel:${s.phone}">${s.phone}</a><br>
+💬 <a href="https://wa.me/${s.whatsapp}">واتساپ</a>
+
+<iframe src="https://maps.google.com/maps?q=${s.lat},${s.lng}&z=15&output=embed"></iframe>
+
+<button onclick="del(${s.id})">حذف</button>
+
+</div>
+`;
+
+});
+
+list.innerHTML=html;
+
+});
+}
+
+function del(id){
+
+fetch("/api/shops/"+id,{
+method:"DELETE",
+headers:{password:adminPass.value}
+}).then(()=>load());
+
+}
+
+load();
+
+</script>
+
+</body>
+  </html>
